@@ -1,9 +1,9 @@
-﻿namespace WeatherSensorLib.Model
+﻿namespace WeatherSensorLib.Messages
 {
     public record WeatherSensorMessage(
         string SensorName,
         DateTimeOffset Timestamp,
-        float WindSpeedMean, 
+        float WindSpeedMean,
         float WindDirectionMean
-        );
+        ) : ISensorMessage;
 }

@@ -1,9 +1,9 @@
-﻿namespace WeatherSensorLib.Model
+﻿namespace WeatherSensorLib.Services
 {
     public record ConnectionParameters(
         string PortName,
-        int BaudRate = 2400, 
-        int DataBits = 8, 
+        int BaudRate = 2400,
+        int DataBits = 8,
         float StopBits = 1f
         );
 }

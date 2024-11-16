@@ -1,17 +1,17 @@
 ﻿using System.Text;
 using System.Text.Json;
-using WeatherSensorLib.Model;
+using WeatherSensorLib.Messages;
 
 namespace WeatherSensorLib.Services
 {
-    public class PersistenceService
+    public class PersistenceService<T> where T : ISensorMessage
     {
         private static readonly JsonSerializerOptions s_options = new()
         {
             WriteIndented = false,
         };
 
-        public (bool, Exception?) TryAppendToFile(WeatherSensorMessage message, string filename)
+        public (bool, Exception?) TryAppendToFile(T message, string filename)
         {
             try
             {
@@ -47,7 +47,7 @@ namespace WeatherSensorLib.Services
                 // If the file is yet empty
                 else
                 {
-                    var serializedMessage = JsonSerializer.Serialize(new List<WeatherSensorMessage>() { message }, s_options);
+                    var serializedMessage = JsonSerializer.Serialize(new List<T>() { message }, s_options);
 
                     reader.Write(Encoding.UTF8.GetBytes(serializedMessage));
                 }

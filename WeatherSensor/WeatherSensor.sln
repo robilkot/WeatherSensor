@@ -5,7 +5,7 @@ VisualStudioVersion = 17.10.35013.160
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WeatherSensorLib", "WeatherSensorLib\WeatherSensorLib.csproj", "{03E5B5DC-6D6E-4AFC-978A-8B767337B147}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WeatherSensoeConsoleApp", "WeatherSensoeConsoleApp\WeatherSensoeConsoleApp.csproj", "{02C47D37-88C3-4D98-8EF1-18454DD52B84}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WeatherSensorConsoleApp", "WeatherSensoeConsoleApp\WeatherSensorConsoleApp.csproj", "{02C47D37-88C3-4D98-8EF1-18454DD52B84}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

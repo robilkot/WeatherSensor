@@ -1,8 +1,8 @@
-﻿using WeatherSensorLib.Model;
+﻿using WeatherSensorLib.Messages;
 
-namespace WeatherSensorLib.Services
+namespace WeatherSensorLib.Readers
 {
-    public class WeatherSensorReader
+    public class WeatherSensorReader : ISensorReader<WeatherSensorMessage>
     {
         record ReaderState
         {
@@ -44,7 +44,7 @@ namespace WeatherSensorLib.Services
             {
                 '$' when current is not ReaderState.Start => new ReaderState.Start(),
                 ',' when current is ReaderState.ReadingField => new ReaderState.Separator(),
-                >= '0' and <= '9' or '.' when current is (ReaderState.Start or ReaderState.Separator or ReaderState.ReadingField) => new ReaderState.ReadingField(data),
+                >= '0' and <= '9' or '.' when current is ReaderState.Start or ReaderState.Separator or ReaderState.ReadingField => new ReaderState.ReadingField(data),
                 '\r' when current is ReaderState.ReadingField => new ReaderState.CR(),
                 '\n' when current is ReaderState.CR => new ReaderState.LF(),
 
@@ -58,8 +58,8 @@ namespace WeatherSensorLib.Services
                 case ReaderState.ReadingField read: _currentField.Write([read.CurrentByte], 0, 1); break;
                 case ReaderState.Separator:
                 case ReaderState.CR: DumpCurrentField(); break;
-                case ReaderState.LF: CompleteMessage(); break;
-                case ReaderState.Corrupted corrupted: InvokeMessageCorrupted(corrupted.CurrentByte); break;
+                case ReaderState.LF: OnMessageCompleted(); break;
+                case ReaderState.Corrupted corrupted: OnMessageCorrupted(corrupted.CurrentByte); break;
             }
         }
 
@@ -68,7 +68,7 @@ namespace WeatherSensorLib.Services
             var field = float.Parse(_currentField.ToArray());
             _currentField.SetLength(0);
 
-            if(_windSpeed is null)
+            if (_windSpeed is null)
             {
                 _windSpeed = field;
                 return;
@@ -81,14 +81,14 @@ namespace WeatherSensorLib.Services
             }
         }
 
-        private void InvokeMessageCorrupted(byte CurrentByte)
+        private void OnMessageCorrupted(byte CurrentByte)
         {
             MessageCorrupted?.Invoke(this, CurrentByte);
 
             ClearCurrentMessageFields();
         }
 
-        private void CompleteMessage()
+        private void OnMessageCompleted()
         {
             // Non-nullability is ensured by grammar state machine
             MessageReceived?.Invoke(this, new(_sensorName, DateTimeOffset.Now, _windSpeed!.Value, _windDirection!.Value));

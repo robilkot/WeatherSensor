@@ -1,24 +1,32 @@
 ﻿
 using PresentApp.Services;
+using System.IO.Ports;
 using WeatherSensoeConsoleApp;
-using WeatherSensorLib.Model;
+using WeatherSensorLib.Messages;
+using WeatherSensorLib.Readers;
 using WeatherSensorLib.Services;
 
-PersistenceService persistenceService = new();
-CommunicationService svc = new();
+
+// Choose active port
+var ports = SerialPort.GetPortNames();
 
 Console.WriteLine("Available ports:");
-svc.AvailablePortsNames.Each((port, index) =>
+ports.Each((port, index) =>
 {
     Console.WriteLine($"{index}: {port}");
 });
 
-
 Console.WriteLine("Input port index:");
 var portIndex = int.Parse(Console.ReadLine()!);
 
-ConnectionParameters parameters = new(svc.AvailablePortsNames[portIndex]);
+var parameters = new ConnectionParameters(ports[portIndex]);
 
+// Create needed services
+var sensorReader = new WeatherSensorReader(parameters.PortName);
+var svc = new CommunicationService<WeatherSensorMessage>(sensorReader);
+var persistenceService = new PersistenceService<WeatherSensorMessage>();
+
+// Subscribe to events
 svc.MessageReceived += (sender, message) =>
 {
     Console.WriteLine($"{message.Timestamp} {message.WindSpeedMean} {message.WindDirectionMean}");
@@ -34,6 +42,9 @@ svc.MessageCorrupted += (sender, args) =>
     Console.WriteLine("Message corrupted");
 };
 
+// Start monitoring
 svc.TryConnect(parameters);
 
 Console.ReadKey();
+
+svc.TryDisconnect();

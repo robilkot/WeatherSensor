@@ -1,23 +1,22 @@
 ﻿using System.IO.Ports;
 using System.Management;
-using WeatherSensorLib.Model;
+using WeatherSensorLib.Messages;
+using WeatherSensorLib.Readers;
 using WeatherSensorLib.Services;
 
 namespace PresentApp.Services
 {
-    public partial class CommunicationService
+    public class CommunicationService<T> where T : ISensorMessage
     {
-        public event EventHandler<WeatherSensorMessage>? MessageReceived = null;
+        public event EventHandler<T>? MessageReceived = null;
         public event EventHandler? MessageCorrupted = null;
 
-        // List of names implemented for convenience in future use in UI
-        public string[] AvailablePortsNames { get; private set; } = [];
-
-        private WeatherSensorReader _reader = default!;
+        private readonly ISensorReader<T> _reader;
         private SerialPort? _activePort = null;
 
-        public CommunicationService()
+        public CommunicationService(ISensorReader<T> reader)
         {
+            _reader = reader;
             OnDeviceConfigurationChanged();
             StartDevicesEventsWatcher();
         }
@@ -50,9 +49,8 @@ namespace PresentApp.Services
             _activePort = port;
             _activePort.DataReceived += OnReceiveData;
 
-            _reader = new(parameters.PortName);
-            _reader.MessageReceived += (sender, message) => MessageReceived?.Invoke(sender, message);
-            _reader.MessageCorrupted += (sender, message) => MessageCorrupted?.Invoke(sender, EventArgs.Empty);
+            _reader.MessageReceived += OnReaderMessageReceived!;
+            _reader.MessageCorrupted += OnReaderMessageCorrupted!;
 
             return (true, null);
         }
@@ -76,6 +74,10 @@ namespace PresentApp.Services
 
                 _activePort.DataReceived -= OnReceiveData;
                 _activePort = null;
+
+
+                _reader.MessageReceived -= OnReaderMessageReceived!;
+                _reader.MessageCorrupted -= OnReaderMessageCorrupted!;
             }
 
             return (true, null);
@@ -105,8 +107,6 @@ namespace PresentApp.Services
                 }
                 return;
             }
-
-            AvailablePortsNames = SerialPort.GetPortNames();
         }
 
         private void OnReceiveData(object sender, SerialDataReceivedEventArgs e)
@@ -122,5 +122,10 @@ namespace PresentApp.Services
                 _reader.Next((byte)b);
             }
         }
+
+        private void OnReaderMessageReceived(object sender, T message)
+            => MessageReceived?.Invoke(sender, message);
+        private void OnReaderMessageCorrupted(object sender, byte message)
+            => MessageCorrupted?.Invoke(sender, EventArgs.Empty);
     }
 }
