@@ -125,7 +125,7 @@ namespace PresentApp.Services
 
         private void OnReaderMessageReceived(object sender, T message)
             => MessageReceived?.Invoke(sender, message);
-        private void OnReaderMessageCorrupted(object sender, byte message)
-            => MessageCorrupted?.Invoke(sender, EventArgs.Empty);
+        private void OnReaderMessageCorrupted(object sender, EventArgs args)
+            => MessageCorrupted?.Invoke(sender, args);
     }
 }

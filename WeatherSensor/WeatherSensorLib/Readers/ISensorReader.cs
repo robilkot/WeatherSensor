@@ -6,6 +6,6 @@ namespace WeatherSensorLib.Readers
     {
         void Next(byte Data);
         event EventHandler<T>? MessageReceived;
-        event EventHandler<byte>? MessageCorrupted;
+        event EventHandler? MessageCorrupted;
     }
 }

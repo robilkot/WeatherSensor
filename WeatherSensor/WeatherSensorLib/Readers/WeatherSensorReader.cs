@@ -4,27 +4,25 @@ namespace WeatherSensorLib.Readers
 {
     public class WeatherSensorReader : ISensorReader<WeatherSensorMessage>
     {
-        record ReaderState
+        abstract record ReaderState
         {
-            private ReaderState() { }
-
-            public record Start : ReaderState;
-            public record ReadingField(byte CurrentByte) : ReaderState;
-            public record Separator : ReaderState;
-            public record CR : ReaderState;
-            public record LF : ReaderState;
-            public record Corrupted(byte CurrentByte) : ReaderState;
+            public sealed record Start : ReaderState;
+            public sealed record ReadingField(byte CurrentByte) : ReaderState;
+            public sealed record Separator : ReaderState;
+            public sealed record CR : ReaderState;
+            public sealed record LF : ReaderState;
+            public sealed record Corrupted : ReaderState;
         }
 
         public event EventHandler<WeatherSensorMessage>? MessageReceived;
-        public event EventHandler<byte>? MessageCorrupted;
+        public event EventHandler? MessageCorrupted;
 
         private readonly string _sensorName;
         private float? _windSpeed = null;
         private float? _windDirection = null;
 
         private MemoryStream _currentField = new(3);
-        private ReaderState _state = new ReaderState.LF();
+        private ReaderState _state = new ReaderState.Start();
 
         public WeatherSensorReader(string SensorName)
         {
@@ -42,13 +40,13 @@ namespace WeatherSensorLib.Readers
         private static ReaderState GetNextState(ReaderState current, byte data)
             => (char)data switch
             {
-                '$' when current is not ReaderState.Start => new ReaderState.Start(),
+                '$' => new ReaderState.Start(),
                 ',' when current is ReaderState.ReadingField => new ReaderState.Separator(),
                 >= '0' and <= '9' or '.' when current is ReaderState.Start or ReaderState.Separator or ReaderState.ReadingField => new ReaderState.ReadingField(data),
                 '\r' when current is ReaderState.ReadingField => new ReaderState.CR(),
                 '\n' when current is ReaderState.CR => new ReaderState.LF(),
 
-                _ => new ReaderState.Corrupted(data),
+                _ => new ReaderState.Corrupted(),
             };
 
         private void HandleState(ReaderState state)
@@ -59,13 +57,19 @@ namespace WeatherSensorLib.Readers
                 case ReaderState.Separator:
                 case ReaderState.CR: DumpCurrentField(); break;
                 case ReaderState.LF: OnMessageCompleted(); break;
-                case ReaderState.Corrupted corrupted: OnMessageCorrupted(corrupted.CurrentByte); break;
+                case ReaderState.Corrupted: OnMessageCorrupted(); break;
             }
         }
 
         private void DumpCurrentField()
         {
-            var field = float.Parse(_currentField.ToArray());
+
+            if (!float.TryParse(_currentField.ToArray(), out float field))
+            {
+                _state = new ReaderState.Corrupted();
+                return;
+            }
+
             _currentField.SetLength(0);
 
             if (_windSpeed is null)
@@ -81,9 +85,9 @@ namespace WeatherSensorLib.Readers
             }
         }
 
-        private void OnMessageCorrupted(byte CurrentByte)
+        private void OnMessageCorrupted()
         {
-            MessageCorrupted?.Invoke(this, CurrentByte);
+            MessageCorrupted?.Invoke(this, EventArgs.Empty);
 
             ClearCurrentMessageFields();
         }
